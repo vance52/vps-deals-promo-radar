@@ -1,0 +1,37 @@
+ILANG
+[TYPE:config][PROJECT:vps-deals][LANG:zh]
+
+::STATE{@SITE, brand:vps-deals, niche:verified VPS pricing and promotions for US buyers, domain:https://vps-deals-promo-radar.pages.dev, locale:en-US, currency:USD, update_hours:6}
+
+::MODULE{PROVIDERS|title:抓哪几家 这里改了站就变}
+  DigitalOcean | https://www.digitalocean.com/ | https://www.digitalocean.com/pricing/droplets | | USD | auto
+  Vultr | https://www.vultr.com/ | https://www.vultr.com/pricing/ | | USD | auto
+  Akamai Linode | https://www.linode.com/ | https://www.linode.com/pricing/ | | USD | auto
+  Hetzner Cloud | https://www.hetzner.com/ | https://www.hetzner.com/cloud/ | | EUR | auto
+  Contabo | https://contabo.com/en-us/ | https://contabo.com/en-us/vps/ | | USD | auto
+  Amazon Lightsail | https://aws.amazon.com/lightsail/ | https://docs.aws.amazon.com/lightsail/latest/userguide/amazon-lightsail-bundles.html | | USD | auto
+  Hostinger | https://www.hostinger.com/ | https://www.hostinger.com/vps-hosting | | USD | auto
+  Namecheap | https://www.namecheap.com/ | https://www.namecheap.com/hosting/vps/ | | USD | source_only
+  OVHcloud | https://www.ovhcloud.com/ | https://www.ovhcloud.com/en/vps/ | | USD | source_only
+
+::MODULE{FIELDS|title:每条优惠提取什么}
+  title price currency offer_url valid_until source_url fetched_at
+
+::MODULE{RENDER|title:页面渲染规则}
+  language | en
+  market | United States
+  freshness_label | Checked against official provider pages
+  max_offers_per_provider | 12
+  show_unpriced_sources | true
+  affiliate_disclosure | Links may later be replaced with disclosed affiliate links; rankings never depend on commission.
+
+::MODULE{UPDATE|title:更新频率}
+  cron | 17 */6 * * *
+  timezone | UTC
+  source_policy | official public pricing, sitemap, feed, or promotion pages only
+  robots_policy | obey robots.txt and do not fetch disallowed paths
+
+::RULE{抓不到 price⇒这条不写 price 字段 也不写进结构化数据 不许拿估的填}
+::RULE{valid_until 已过⇒标记过期或下架 不许留着冒充有效}
+::RULE{affiliate_link 为空⇒使用厂商官方裸链并标记为非联盟链接}
+::BOUNDARY{never:编优惠 编价格 编佣金 绕过robots.txt 抓登录内容|scope:permanent}
