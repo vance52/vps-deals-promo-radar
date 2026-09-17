@@ -1,5 +1,5 @@
 ILANG
-[TYPE:agent-policy][PROJECT:vps-deals][LANG:zh]
+[TYPE:agent-policy][PROJECT:HostDealsHub][LANG:zh]
 
 ::STATE{@PROJECT, purpose:自动汇总公开且可核验的VPS价格与优惠, runtime:纯Python静态站, hosting:Cloudflare Pages}
 

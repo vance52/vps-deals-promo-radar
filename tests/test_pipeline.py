@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class ConfigTests(unittest.TestCase):
     def test_real_config_is_ilang_and_has_providers(self) -> None:
         config = load_site_config()
-        self.assertEqual(config.brand, "vps-deals")
+        self.assertEqual(config.brand, "HostDealsHub")
         self.assertGreaterEqual(len(config.providers), 3)
         self.assertTrue(all(provider.source_url.startswith("https://") for provider in config.providers))
 
@@ -97,6 +97,16 @@ class GeneratedSiteTests(unittest.TestCase):
         self.assertIn('rel="canonical"', index)
         self.assertIn('application/ld+json', index)
         json.loads((ROOT / "site" / "data" / "offers.json").read_text(encoding="utf-8"))
+
+    def test_trust_pages_and_brand_are_generated(self) -> None:
+        for name in ("about", "contact", "privacy"):
+            page = ROOT / "site" / name / "index.html"
+            self.assertTrue(page.exists(), str(page))
+            html = page.read_text(encoding="utf-8")
+            self.assertIn("HostDealsHub", html)
+        index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn(">vps-deals<", index)
+        self.assertIn('/privacy/', index)
 
 
 if __name__ == "__main__":

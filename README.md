@@ -1,4 +1,4 @@
-# vps-deals promo radar
+# HostDealsHub
 
 An evidence-first, static VPS pricing and promotion tracker for US buyers. Every listed price is extracted from a linked official provider page; missing or ambiguous prices are left out instead of estimated.
 
