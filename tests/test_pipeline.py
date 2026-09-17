@@ -89,7 +89,7 @@ class ExtractionTests(unittest.TestCase):
 
 class GeneratedSiteTests(unittest.TestCase):
     def test_generated_site_has_core_files_and_no_tokens(self) -> None:
-        required = [ROOT / "site" / "index.html", ROOT / "site" / "robots.txt", ROOT / "site" / "sitemap.xml", ROOT / "site" / "data" / "offers.json"]
+        required = [ROOT / "site" / "index.html", ROOT / "site" / "404.html", ROOT / "site" / "robots.txt", ROOT / "site" / "sitemap.xml", ROOT / "site" / "data" / "offers.json"]
         for path in required:
             self.assertTrue(path.exists(), str(path))
         index = required[0].read_text(encoding="utf-8")
@@ -107,6 +107,14 @@ class GeneratedSiteTests(unittest.TestCase):
         index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
         self.assertNotIn(">vps-deals<", index)
         self.assertIn('/privacy/', index)
+
+    def test_custom_404_disables_spa_fallback(self) -> None:
+        page = (ROOT / "site" / "404.html").read_text(encoding="utf-8")
+        sitemap = (ROOT / "site" / "sitemap.xml").read_text(encoding="utf-8")
+        self.assertIn('name="robots" content="noindex,follow"', page)
+        self.assertIn("That page does not exist.", page)
+        self.assertNotIn("/404.html", sitemap)
+        self.assertFalse((ROOT / "site" / "_redirects").exists())
 
 
 if __name__ == "__main__":

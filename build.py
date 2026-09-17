@@ -355,6 +355,27 @@ def build_trust_pages(config: Any, data: dict[str, Any], urls: list[tuple[str, s
         urls.append((path, iso_date(updated)))
 
 
+def build_not_found(config: Any, data: dict[str, Any]) -> None:
+    updated = str(data["meta"]["generated_at"])
+    content = """
+    <section class="page-hero"><div class="container"><span class="eyebrow">Error 404</span><h1>That page does not exist.</h1><p class="lede">The address may be mistyped, or the page may have moved. Nothing has been substituted for the missing page.</p></div></section>
+    <section class="section"><div class="container"><article class="panel"><h2>Continue from a known page</h2><p>Browse the latest source-linked VPS prices, compare verified plans, or review how the dataset is produced.</p><div class="actions"><a class="button" href="/">Browse deals</a><a class="text-link" href="/compare/">Compare plans</a><a class="text-link" href="/methodology/">Read the methodology</a></div></article></div></section>
+    """
+    schema = {"@context": "https://schema.org", "@type": "WebPage", "name": "Page not found", "url": f"{config.domain}/404.html"}
+    html = render_page(
+        "compare.html",
+        config=config,
+        title=f"Page not found | {config.brand}",
+        description="The requested HostDealsHub page does not exist.",
+        canonical_path="/404.html",
+        content=content,
+        schema=schema,
+        updated_at=updated,
+    )
+    html = html.replace('<link rel="canonical"', '<meta name="robots" content="noindex,follow"><link rel="canonical"', 1)
+    write_text(SITE_DIR / "404.html", html)
+
+
 def build_sitemap(config: Any, urls: list[tuple[str, str]]) -> None:
     unique: dict[str, str] = {}
     for path, lastmod in urls:
@@ -385,6 +406,7 @@ def main() -> int:
     build_compare(config, data, urls)
     build_methodology(config, data, urls)
     build_trust_pages(config, data, urls)
+    build_not_found(config, data)
     build_sitemap(config, urls)
     print(f"Built {len(urls)} indexable pages in {SITE_DIR}")
     return 0
