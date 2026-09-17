@@ -1,7 +1,7 @@
 ILANG
 [TYPE:config][PROJECT:vps-deals][LANG:zh]
 
-::STATE{@SITE, brand:vps-deals, niche:verified VPS pricing and promotions for US buyers, domain:https://vps-deals-promo-radar-7yz.pages.dev, locale:en-US, currency:USD, update_hours:6}
+::STATE{@SITE, brand:vps-deals, niche:verified VPS pricing and promotions for US buyers, domain:https://hostdealshub.com, locale:en-US, currency:USD, update_hours:6}
 
 ::MODULE{PROVIDERS|title:抓哪几家 这里改了站就变}
   DigitalOcean | https://www.digitalocean.com/ | https://www.digitalocean.com/pricing/droplets | | USD | auto

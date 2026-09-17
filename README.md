@@ -2,7 +2,7 @@
 
 An evidence-first, static VPS pricing and promotion tracker for US buyers. Every listed price is extracted from a linked official provider page; missing or ambiguous prices are left out instead of estimated.
 
-Live site: https://vps-deals-promo-radar.pages.dev
+Live site: https://hostdealshub.com
 
 ## What is in the repository
 
