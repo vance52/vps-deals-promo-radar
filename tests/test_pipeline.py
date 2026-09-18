@@ -108,6 +108,18 @@ class GeneratedSiteTests(unittest.TestCase):
         self.assertNotIn(">vps-deals<", index)
         self.assertIn('/privacy/', index)
 
+    def test_contact_address_is_live_without_setup_disclaimer(self) -> None:
+        pages = [
+            ROOT / "site" / "about" / "index.html",
+            ROOT / "site" / "contact" / "index.html",
+            ROOT / "site" / "privacy" / "index.html",
+        ]
+        for page in pages:
+            html = page.read_text(encoding="utf-8")
+            self.assertIn("contact@hostdealshub.com", html)
+            self.assertNotIn("may not yet accept messages", html)
+            self.assertNotIn("scheduled for a separate", html)
+
     def test_custom_404_disables_spa_fallback(self) -> None:
         page = (ROOT / "site" / "404.html").read_text(encoding="utf-8")
         sitemap = (ROOT / "site" / "sitemap.xml").read_text(encoding="utf-8")
