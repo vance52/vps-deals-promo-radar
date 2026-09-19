@@ -248,6 +248,7 @@ def build_provider_pages(config: Any, data: dict[str, Any], urls: list[tuple[str
         offers = offers_by_provider.get(name, [])
         facts = [fact for fact in config.provider_facts if fact.provider == name]
         referral = next((item for item in config.provider_referrals if item.provider == name), None)
+        verification = next((item for item in config.provider_verifications if item.provider == name), None)
         if facts:
             cards = "".join(
                 f'''<article class="deal-card"><div class="deal-topline"><span class="provider-chip">{escape(fact.plan)}</span><span class="verified">Official price</span></div><h3>{escape(fact.vcpu)} · {escape(fact.memory)} memory</h3><div class="price">${escape(fact.monthly_price)} <small>/ month</small></div><div class="facts"><div class="fact"><span>Storage</span><strong>{escape(fact.storage)}</strong></div><div class="fact"><span>Bandwidth</span><strong>{escape(fact.bandwidth)}</strong></div></div>{f'<p class="notice">{escape(fact.note)}</p>' if fact.note else ''}<p class="fine">Source: {escape(fact.source_url)}<br>Checked: {escape(fact.checked_on)}</p></article>'''
@@ -261,12 +262,29 @@ def build_provider_pages(config: Any, data: dict[str, Any], urls: list[tuple[str
         checked_on = max((fact.checked_on for fact in facts), default=iso_date(str(status.get("checked_at", updated))))
         page_updated = checked_on if facts else str(status.get("checked_at", updated))
         published_count = len(facts) if facts else len(offers)
-        if facts:
-            source_facts = f'''<div class="fact"><span>Automated fetch</span><strong>{escape(str(status.get('status', 'unknown')).replace('_', ' '))}</strong></div><div class="fact"><span>Published prices</span><strong>{published_count}</strong></div><div class="fact"><span>Price check</span><strong>{escape(checked_on)}</strong></div><div class="fact"><span>HTTP</span><strong>{escape(str(status.get('http_status', 'not returned')))}</strong></div>'''
+        if facts and verification:
+            method_labels = {
+                "browser_session_official_pricing_table": "Browser session: official pricing table",
+            }
+            http_labels = {
+                "not_exposed_by_browser_session": "Not exposed by browser session",
+            }
+            price_method = method_labels.get(verification.method, verification.method.replace("_", " "))
+            http_status = http_labels.get(verification.http_status, verification.http_status.replace("_", " "))
+            checked_on = verification.checked_on
+            page_updated = checked_on
             lede = f"{published_count} Cloud Compute Regular Performance monthly prices checked against Vultr's official pricing page on {checked_on}."
         else:
-            source_facts = f'''<div class="fact"><span>Fetch status</span><strong>{escape(str(status.get('status', 'unknown')).replace('_', ' '))}</strong></div><div class="fact"><span>Offers</span><strong>{len(offers)}</strong></div><div class="fact"><span>Checked</span><strong>{escape(iso_date(str(status.get('checked_at', updated))))}</strong></div><div class="fact"><span>HTTP</span><strong>{escape(str(status.get('http_status', 'not returned')))}</strong></div>'''
+            methods = sorted({str(offer.get("extraction", "")).strip() for offer in offers if offer.get("extraction")})
+            if methods:
+                price_method = "Automated: " + "; ".join(methods)
+            elif str(status.get("status")) == "ok":
+                price_method = "Automated check: no price extracted"
+            else:
+                price_method = "No price published"
+            http_status = str(status["http_status"]) if "http_status" in status else "No source response"
             lede = str(status.get('message', 'Official source checked.'))
+        source_facts = f'''<div class="fact"><span>Price method</span><strong>{escape(price_method)}</strong></div><div class="fact"><span>Published prices</span><strong>{published_count}</strong></div><div class="fact"><span>Checked</span><strong>{escape(checked_on)}</strong></div><div class="fact"><span>HTTP status</span><strong>{escape(http_status)}</strong></div>'''
         content = f"""
         <section class="page-hero"><div class="container"><div class="breadcrumbs"><a href="/">Deals</a> / Providers / {escape(name)}</div><span class="eyebrow">Official-source provider file</span><h1>{escape(name)} VPS pricing</h1><p class="lede">{escape(lede)}</p></div></section>
         <section class="section"><div class="container split"><div><div class="deal-grid">{cards}</div>{referral_block}</div><aside class="panel"><h2>Source record</h2><div class="facts">{source_facts}</div><p class="source-box"><strong>Official source</strong><br><a href="{escape(str(status['source_url']))}" rel="nofollow noopener">{escape(str(status['source_url']))}</a></p></aside></div></section>

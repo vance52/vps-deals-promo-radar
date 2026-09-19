@@ -30,6 +30,9 @@ ILANG
 ::MODULE{PROVIDER_REFERRALS|title:只在对应厂商页事实块下方渲染一次}
   Vultr | https://www.vultr.com/?ref=7999218 | View Vultr plans via our referral link | This is an affiliate referral link. We may receive a reward if you sign up and meet Vultr's program requirements.
 
+::MODULE{PROVIDER_VERIFICATIONS|title:非自动管线价格的真实读取方式和响应证据}
+  Vultr | browser_session_official_pricing_table | not_exposed_by_browser_session | 2026-09-19
+
 ::MODULE{FIELDS|title:每条优惠提取什么}
   title price currency offer_url valid_until source_url fetched_at
 

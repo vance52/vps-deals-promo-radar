@@ -25,6 +25,7 @@ class ConfigTests(unittest.TestCase):
         self.assertTrue(all(provider.source_url.startswith("https://") for provider in config.providers))
         self.assertEqual(len([fact for fact in config.provider_facts if fact.provider == "Vultr"]), 11)
         self.assertEqual(len([item for item in config.provider_referrals if item.provider == "Vultr"]), 1)
+        self.assertEqual(len([item for item in config.provider_verifications if item.provider == "Vultr"]), 1)
 
     def test_provider_change_drives_provider_page(self) -> None:
         source = (ROOT / ".ilang" / "site.ilang").read_text(encoding="utf-8")
@@ -98,6 +99,22 @@ class GeneratedSiteTests(unittest.TestCase):
         self.assertEqual(page.count("https://www.vultr.com/?ref=7999218"), 1)
         self.assertIn("This is an affiliate referral link.", page)
         self.assertIn('<a href="https://www.vultr.com/pricing/" rel="nofollow noopener">', page)
+        self.assertIn("Browser session: official pricing table", page)
+        self.assertIn("Not exposed by browser session", page)
+        self.assertNotIn("blocked by robots", page)
+        self.assertNotIn("not returned", page)
+
+    def test_source_record_matches_three_automated_provider_results(self) -> None:
+        expectations = {
+            "digitalocean": ("Automated: official HTML monthly-price table", "12", "200"),
+            "hostinger": ("Automated: official JSON-LD Offer", "4", "200"),
+            "hetzner-cloud": ("Automated check: no price extracted", "0", "200"),
+        }
+        for slug, (method, count, http_status) in expectations.items():
+            page = (ROOT / "site" / "providers" / slug / "index.html").read_text(encoding="utf-8")
+            self.assertIn(method, page, slug)
+            self.assertIn(f"<span>Published prices</span><strong>{count}</strong>", page, slug)
+            self.assertIn(f"<span>HTTP status</span><strong>{http_status}</strong>", page, slug)
 
     def test_generated_site_has_core_files_and_no_tokens(self) -> None:
         required = [ROOT / "site" / "index.html", ROOT / "site" / "404.html", ROOT / "site" / "robots.txt", ROOT / "site" / "sitemap.xml", ROOT / "site" / "data" / "offers.json"]

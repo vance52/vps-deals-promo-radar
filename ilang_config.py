@@ -48,6 +48,14 @@ class ProviderReferral:
 
 
 @dataclass(frozen=True)
+class ProviderVerification:
+    provider: str
+    method: str
+    http_status: str
+    checked_on: str
+
+
+@dataclass(frozen=True)
 class SiteConfig:
     brand: str
     niche: str
@@ -58,6 +66,7 @@ class SiteConfig:
     providers: tuple[Provider, ...]
     provider_facts: tuple[ProviderFact, ...] = ()
     provider_referrals: tuple[ProviderReferral, ...] = ()
+    provider_verifications: tuple[ProviderVerification, ...] = ()
     render: dict[str, str] = field(default_factory=dict)
     update: dict[str, str] = field(default_factory=dict)
 
@@ -167,6 +176,25 @@ def load_site_config(path: Path | None = None) -> SiteConfig:
             ProviderReferral(provider=provider, url=url, label=label, disclosure=disclosure)
         )
 
+    provider_verifications: list[ProviderVerification] = []
+    for raw in _module(text, "PROVIDER_VERIFICATIONS").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("[") or "|" not in line:
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        parts += [""] * (4 - len(parts))
+        provider, method, http_status, checked_on = parts[:4]
+        if not all((provider, method, http_status, checked_on)):
+            raise ValueError(f"Invalid provider verification row: {raw}")
+        provider_verifications.append(
+            ProviderVerification(
+                provider=provider,
+                method=method,
+                http_status=http_status,
+                checked_on=checked_on,
+            )
+        )
+
     return SiteConfig(
         brand=state.get("brand", "vps-deals"),
         niche=state.get("niche", "verified VPS pricing"),
@@ -177,6 +205,7 @@ def load_site_config(path: Path | None = None) -> SiteConfig:
         providers=tuple(providers),
         provider_facts=tuple(provider_facts),
         provider_referrals=tuple(provider_referrals),
+        provider_verifications=tuple(provider_verifications),
         render=_pipe_map(_module(text, "RENDER")),
         update=_pipe_map(_module(text, "UPDATE")),
     )
