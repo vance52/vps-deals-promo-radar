@@ -14,6 +14,22 @@ ILANG
   Namecheap | https://www.namecheap.com/ | https://www.namecheap.com/hosting/vps/ | | USD | source_only
   OVHcloud | https://www.ovhcloud.com/ | https://www.ovhcloud.com/en/vps/ | | USD | source_only
 
+::MODULE{PROVIDER_FACTS|title:浏览器人工核验的官方价与规格 只渲染在对应厂商页}
+  Vultr | Cloud Compute Regular Performance | 1 vCPU | 0.5 GB | 0.50 TB | 10 GB | 2.50 | USD | https://www.vultr.com/pricing/ | 2026-09-19 | IPv6 only
+  Vultr | Cloud Compute Regular Performance | 1 vCPU | 0.5 GB | 0.50 TB | 10 GB | 3.50 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 1 vCPU | 1 GB | 1.00 TB | 25 GB | 5.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 1 vCPU | 2 GB | 2.00 TB | 55 GB | 10.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 2 vCPUs | 2 GB | 3.00 TB | 65 GB | 15.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 2 vCPUs | 4 GB | 3.00 TB | 80 GB | 20.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 4 vCPUs | 8 GB | 4.00 TB | 160 GB | 40.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 6 vCPUs | 16 GB | 5.00 TB | 320 GB | 80.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 8 vCPUs | 32 GB | 6.00 TB | 640 GB | 160.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 16 vCPUs | 64 GB | 10.00 TB | 1280 GB | 320.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  Vultr | Cloud Compute Regular Performance | 24 vCPUs | 96 GB | 15.00 TB | 1600 GB | 640.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+
+::MODULE{PROVIDER_REFERRALS|title:只在对应厂商页事实块下方渲染一次}
+  Vultr | https://www.vultr.com/?ref=7999218 | View Vultr plans via our referral link | This is an affiliate referral link. We may receive a reward if you sign up and meet Vultr's program requirements.
+
 ::MODULE{FIELDS|title:每条优惠提取什么}
   title price currency offer_url valid_until source_url fetched_at
 

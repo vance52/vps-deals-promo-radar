@@ -25,6 +25,29 @@ class Provider:
 
 
 @dataclass(frozen=True)
+class ProviderFact:
+    provider: str
+    plan: str
+    vcpu: str
+    memory: str
+    bandwidth: str
+    storage: str
+    monthly_price: str
+    currency: str
+    source_url: str
+    checked_on: str
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class ProviderReferral:
+    provider: str
+    url: str
+    label: str
+    disclosure: str
+
+
+@dataclass(frozen=True)
 class SiteConfig:
     brand: str
     niche: str
@@ -33,6 +56,8 @@ class SiteConfig:
     currency: str
     update_hours: int
     providers: tuple[Provider, ...]
+    provider_facts: tuple[ProviderFact, ...] = ()
+    provider_referrals: tuple[ProviderReferral, ...] = ()
     render: dict[str, str] = field(default_factory=dict)
     update: dict[str, str] = field(default_factory=dict)
 
@@ -102,6 +127,46 @@ def load_site_config(path: Path | None = None) -> SiteConfig:
     if not providers:
         raise ValueError("At least one provider is required in site.ilang")
 
+    provider_facts: list[ProviderFact] = []
+    for raw in _module(text, "PROVIDER_FACTS").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("[") or "|" not in line:
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        parts += [""] * (11 - len(parts))
+        provider, plan, vcpu, memory, bandwidth, storage, monthly_price, currency, source_url, checked_on, note = parts[:11]
+        if not all((provider, plan, vcpu, memory, bandwidth, storage, monthly_price, currency, source_url, checked_on)):
+            raise ValueError(f"Invalid provider fact row: {raw}")
+        provider_facts.append(
+            ProviderFact(
+                provider=provider,
+                plan=plan,
+                vcpu=vcpu,
+                memory=memory,
+                bandwidth=bandwidth,
+                storage=storage,
+                monthly_price=monthly_price,
+                currency=currency,
+                source_url=source_url,
+                checked_on=checked_on,
+                note=note,
+            )
+        )
+
+    provider_referrals: list[ProviderReferral] = []
+    for raw in _module(text, "PROVIDER_REFERRALS").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("[") or "|" not in line:
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        parts += [""] * (4 - len(parts))
+        provider, url, label, disclosure = parts[:4]
+        if not all((provider, url, label, disclosure)):
+            raise ValueError(f"Invalid provider referral row: {raw}")
+        provider_referrals.append(
+            ProviderReferral(provider=provider, url=url, label=label, disclosure=disclosure)
+        )
+
     return SiteConfig(
         brand=state.get("brand", "vps-deals"),
         niche=state.get("niche", "verified VPS pricing"),
@@ -110,6 +175,8 @@ def load_site_config(path: Path | None = None) -> SiteConfig:
         currency=state.get("currency", "USD"),
         update_hours=int(state.get("update_hours", "6")),
         providers=tuple(providers),
+        provider_facts=tuple(provider_facts),
+        provider_referrals=tuple(provider_referrals),
         render=_pipe_map(_module(text, "RENDER")),
         update=_pipe_map(_module(text, "UPDATE")),
     )

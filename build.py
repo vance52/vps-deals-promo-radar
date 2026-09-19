@@ -246,23 +246,42 @@ def build_provider_pages(config: Any, data: dict[str, Any], urls: list[tuple[str
         name = str(status["name"])
         path = f"/providers/{slugify(name)}/"
         offers = offers_by_provider.get(name, [])
-        cards = "".join(offer_card(offer) for offer in offers) or '<div class="empty"><h3>No verified priced plans in this refresh</h3><p>Use the official source below. We did not publish an ambiguous amount.</p></div>'
-        affiliate = bool(status.get("affiliate_url"))
-        rel = "sponsored nofollow noopener" if affiliate else "nofollow noopener"
+        facts = [fact for fact in config.provider_facts if fact.provider == name]
+        referral = next((item for item in config.provider_referrals if item.provider == name), None)
+        if facts:
+            cards = "".join(
+                f'''<article class="deal-card"><div class="deal-topline"><span class="provider-chip">{escape(fact.plan)}</span><span class="verified">Official price</span></div><h3>{escape(fact.vcpu)} · {escape(fact.memory)} memory</h3><div class="price">${escape(fact.monthly_price)} <small>/ month</small></div><div class="facts"><div class="fact"><span>Storage</span><strong>{escape(fact.storage)}</strong></div><div class="fact"><span>Bandwidth</span><strong>{escape(fact.bandwidth)}</strong></div></div>{f'<p class="notice">{escape(fact.note)}</p>' if fact.note else ''}<p class="fine">Source: {escape(fact.source_url)}<br>Checked: {escape(fact.checked_on)}</p></article>'''
+                for fact in facts
+            )
+        else:
+            cards = "".join(offer_card(offer) for offer in offers) or '<div class="empty"><h3>No verified priced plans in this refresh</h3><p>Use the official source below. We did not publish an ambiguous amount.</p></div>'
+        referral_block = ""
+        if referral:
+            referral_block = f'''<div class="panel"><p class="notice">{escape(referral.disclosure)}</p><p><a class="button" href="{escape(referral.url)}" rel="sponsored nofollow noopener">{escape(referral.label)} ↗</a></p></div>'''
+        checked_on = max((fact.checked_on for fact in facts), default=iso_date(str(status.get("checked_at", updated))))
+        page_updated = checked_on if facts else str(status.get("checked_at", updated))
+        published_count = len(facts) if facts else len(offers)
+        if facts:
+            source_facts = f'''<div class="fact"><span>Automated fetch</span><strong>{escape(str(status.get('status', 'unknown')).replace('_', ' '))}</strong></div><div class="fact"><span>Published prices</span><strong>{published_count}</strong></div><div class="fact"><span>Price check</span><strong>{escape(checked_on)}</strong></div><div class="fact"><span>HTTP</span><strong>{escape(str(status.get('http_status', 'not returned')))}</strong></div>'''
+            lede = f"{published_count} Cloud Compute Regular Performance monthly prices checked against Vultr's official pricing page on {checked_on}."
+        else:
+            source_facts = f'''<div class="fact"><span>Fetch status</span><strong>{escape(str(status.get('status', 'unknown')).replace('_', ' '))}</strong></div><div class="fact"><span>Offers</span><strong>{len(offers)}</strong></div><div class="fact"><span>Checked</span><strong>{escape(iso_date(str(status.get('checked_at', updated))))}</strong></div><div class="fact"><span>HTTP</span><strong>{escape(str(status.get('http_status', 'not returned')))}</strong></div>'''
+            lede = str(status.get('message', 'Official source checked.'))
         content = f"""
-        <section class="page-hero"><div class="container"><div class="breadcrumbs"><a href="/">Deals</a> / Providers / {escape(name)}</div><span class="eyebrow">Official-source provider file</span><h1>{escape(name)} VPS pricing</h1><p class="lede">{escape(str(status.get('message', 'Official source checked.')))}</p></div></section>
-        <section class="section"><div class="container split"><div><div class="deal-grid">{cards}</div></div><aside class="panel"><h2>Source record</h2><div class="facts"><div class="fact"><span>Fetch status</span><strong>{escape(str(status.get('status', 'unknown')).replace('_', ' '))}</strong></div><div class="fact"><span>Offers</span><strong>{len(offers)}</strong></div><div class="fact"><span>Checked</span><strong>{escape(iso_date(str(status.get('checked_at', updated))))}</strong></div><div class="fact"><span>HTTP</span><strong>{escape(str(status.get('http_status', 'not returned')))}</strong></div></div><p class="source-box"><strong>Official source</strong><br><a href="{escape(str(status['source_url']))}" rel="{rel}">{escape(str(status['source_url']))}</a></p></aside></div></section>
+        <section class="page-hero"><div class="container"><div class="breadcrumbs"><a href="/">Deals</a> / Providers / {escape(name)}</div><span class="eyebrow">Official-source provider file</span><h1>{escape(name)} VPS pricing</h1><p class="lede">{escape(lede)}</p></div></section>
+        <section class="section"><div class="container split"><div><div class="deal-grid">{cards}</div>{referral_block}</div><aside class="panel"><h2>Source record</h2><div class="facts">{source_facts}</div><p class="source-box"><strong>Official source</strong><br><a href="{escape(str(status['source_url']))}" rel="nofollow noopener">{escape(str(status['source_url']))}</a></p></aside></div></section>
         """
         graph: list[dict[str, Any]] = [breadcrumb_schema(config, [("Deals", "/"), (name, path)])]
-        if offers:
-            prices = [float(offer["price"]) for offer in offers]
-            currencies = {str(offer["currency"]) for offer in offers}
-            aggregate: dict[str, Any] = {"@type": "AggregateOffer", "lowPrice": min(prices), "highPrice": max(prices), "offerCount": len(offers), "url": f"{config.domain}{path}"}
+        priced_items = facts if facts else offers
+        if priced_items:
+            prices = [float(item.monthly_price) for item in facts] if facts else [float(item["price"]) for item in offers]
+            currencies = {item.currency for item in facts} if facts else {str(item["currency"]) for item in offers}
+            aggregate: dict[str, Any] = {"@type": "AggregateOffer", "lowPrice": min(prices), "highPrice": max(prices), "offerCount": len(priced_items), "url": f"{config.domain}{path}"}
             if len(currencies) == 1:
                 aggregate["priceCurrency"] = next(iter(currencies))
             graph.insert(0, {"@type": "Service", "name": f"{name} VPS plans", "provider": {"@type": "Organization", "name": name, "url": status["homepage"]}, "offers": aggregate})
         schema = {"@context": "https://schema.org", "@graph": graph}
-        html = render_page("provider.html", config=config, title=f"{name} VPS pricing — {month_label(updated)} | {config.brand}", description=f"Source-linked {name} VPS prices checked against the provider's official page. Missing or ambiguous prices are not estimated.", canonical_path=path, content=content, schema=schema, updated_at=str(status.get("checked_at", updated)))
+        html = render_page("provider.html", config=config, title=f"{name} VPS pricing — {month_label(updated)} | {config.brand}", description=f"Source-linked {name} VPS prices checked against the provider's official page. Missing or ambiguous prices are not estimated.", canonical_path=path, content=content, schema=schema, updated_at=page_updated)
         write_text(output_path(path), html)
         urls.append((path, iso_date(str(status.get("checked_at", updated)))))
 
