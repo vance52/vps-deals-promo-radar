@@ -5,43 +5,39 @@ ILANG
 
 ::MODULE{PROVIDERS|title:抓哪几家 这里改了站就变}
   DigitalOcean | https://www.digitalocean.com/ | https://www.digitalocean.com/pricing/droplets | | USD | auto
-  Vultr | https://www.vultr.com/ | https://www.vultr.com/pricing/ | | USD | auto
-  Akamai Linode | https://www.linode.com/ | https://www.linode.com/pricing/ | | USD | auto
-  Hetzner Cloud | https://www.hetzner.com/ | https://www.hetzner.com/cloud/ | | EUR | auto
-  Contabo | https://contabo.com/en-us/ | https://contabo.com/en-us/vps/ | | USD | auto
+  Vultr | https://www.vultr.com/ | https://www.vultr.com/pricing/ | | USD | browser_auto
+  Akamai Linode | https://www.linode.com/ | https://www.linode.com/pricing/ | | USD | browser_auto
+  Hetzner Cloud | https://www.hetzner.com/ | https://www.hetzner.com/cloud/ | | EUR | browser_auto
+  Contabo | https://contabo.com/en-us/ | https://contabo.com/en-us/vps/ | | USD | browser_auto
   Amazon Lightsail | https://aws.amazon.com/lightsail/ | https://docs.aws.amazon.com/lightsail/latest/userguide/amazon-lightsail-bundles.html | | USD | auto
   Hostinger | https://www.hostinger.com/ | https://www.hostinger.com/vps-hosting | | USD | auto
-  Namecheap | https://www.namecheap.com/ | https://www.namecheap.com/hosting/vps/ | | USD | source_only
-  OVHcloud | https://www.ovhcloud.com/ | https://www.ovhcloud.com/en/vps/ | | USD | source_only
+  Namecheap | https://www.namecheap.com/ | https://www.namecheap.com/hosting/vps/ | | USD | browser_auto
+  OVHcloud | https://www.ovhcloud.com/ | https://www.ovhcloud.com/en/vps/ | | USD | browser_auto
 
 ::MODULE{PROVIDER_FACTS|title:浏览器人工核验的官方价与规格 只渲染在对应厂商页}
-  Vultr | Cloud Compute Regular Performance | 1 vCPU | 0.5 GB | 0.50 TB | 10 GB | 2.50 | USD | https://www.vultr.com/pricing/ | 2026-09-19 | IPv6 only
-  Vultr | Cloud Compute Regular Performance | 1 vCPU | 0.5 GB | 0.50 TB | 10 GB | 3.50 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 1 vCPU | 1 GB | 1.00 TB | 25 GB | 5.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 1 vCPU | 2 GB | 2.00 TB | 55 GB | 10.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 2 vCPUs | 2 GB | 3.00 TB | 65 GB | 15.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 2 vCPUs | 4 GB | 3.00 TB | 80 GB | 20.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 4 vCPUs | 8 GB | 4.00 TB | 160 GB | 40.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 6 vCPUs | 16 GB | 5.00 TB | 320 GB | 80.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 8 vCPUs | 32 GB | 6.00 TB | 640 GB | 160.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 16 vCPUs | 64 GB | 10.00 TB | 1280 GB | 320.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
-  Vultr | Cloud Compute Regular Performance | 24 vCPUs | 96 GB | 15.00 TB | 1600 GB | 640.00 | USD | https://www.vultr.com/pricing/ | 2026-09-19 |
+  [EMPTY] 一次性人工快照已停用 价格与规格只接受自动管线结果
 
 ::MODULE{PROVIDER_REFERRALS|title:只在对应厂商页事实块下方渲染一次}
   Vultr | https://www.vultr.com/?ref=7999218 | View Vultr plans via our referral link | This is an affiliate referral link. We may receive a reward if you sign up and meet Vultr's program requirements.
 
 ::MODULE{PROVIDER_VERIFICATIONS|title:非自动管线价格的真实读取方式和响应证据}
-  Vultr | browser_session_official_pricing_table | not_exposed_by_browser_session | 2026-09-19
+  [EMPTY] 非自动核验记录已停用
 
 ::MODULE{FIELDS|title:每条优惠提取什么}
-  title price currency offer_url valid_until source_url fetched_at
+  title price currency billing_period renewal resources offer_url valid_until source_url fetched_at
 
 ::MODULE{RENDER|title:页面渲染规则}
   language | en
   market | United States
   freshness_label | Checked against official provider pages
   max_offers_per_provider | 12
-  show_unpriced_sources | true
+  show_unpriced_sources | false
+  legacy_deal_providers | DigitalOcean, Amazon Lightsail, Hostinger
+  legacy_deal_expected_count | 28
+  legacy_sitemap_expected_count | 43
+  merged_deal_redirect_status | 301
+  retired_providers | Vultr, Akamai Linode, Hetzner Cloud, Contabo, Namecheap
+  retired_provider_status | 410
   affiliate_disclosure | Links may later be replaced with disclosed affiliate links; rankings never depend on commission.
 
 ::MODULE{UPDATE|title:更新频率}

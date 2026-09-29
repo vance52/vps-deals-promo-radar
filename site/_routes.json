@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "include": [
+    "/providers/akamai-linode",
+    "/providers/akamai-linode/",
+    "/providers/contabo",
+    "/providers/contabo/",
+    "/providers/hetzner-cloud",
+    "/providers/hetzner-cloud/",
+    "/providers/namecheap",
+    "/providers/namecheap/",
+    "/providers/vultr",
+    "/providers/vultr/"
+  ],
+  "exclude": []
+}

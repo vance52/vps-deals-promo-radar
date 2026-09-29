@@ -59,6 +59,26 @@ def price_text(offer: dict[str, Any]) -> str:
     return f"{MONEY.get(currency, currency + ' ')}{value}{suffix}"
 
 
+def verified_field(offer: dict[str, Any], key: str) -> str:
+    value = offer.get(key)
+    if value:
+        return escape(str(value))
+    return "Official page did not state this"
+
+
+def show_unpriced_sources(config: Any) -> bool:
+    return str(config.render.get("show_unpriced_sources", "true")).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def render_list(config: Any, key: str) -> list[str]:
+    return [item.strip() for item in str(config.render.get(key, "")).split(",") if item.strip()]
+
+
+def provider_plan_path(offer: dict[str, Any]) -> str:
+    """Return the single public destination for a plan: its provider-page anchor."""
+    return f"/providers/{slugify(str(offer['provider']))}/#plan-{offer['id']}"
+
+
 def output_path(url_path: str) -> Path:
     if url_path == "/":
         return SITE_DIR / "index.html"
@@ -126,17 +146,17 @@ def render_page(
 
 def offer_card(offer: dict[str, Any]) -> str:
     provider_slug = slugify(str(offer["provider"]))
-    deal_path = f"/deals/{slugify(str(offer['provider']))}-{offer['id']}/"
+    plan_path = provider_plan_path(offer)
     affiliate = bool(offer.get("affiliate"))
     rel = "sponsored nofollow noopener" if affiliate else "nofollow noopener"
     link_label = "See disclosed offer" if affiliate else "Open official source"
     return f"""
-    <article class="deal-card">
+    <article class="deal-card" id="plan-{escape(str(offer['id']))}">
       <div class="deal-topline"><a class="provider-chip" href="/providers/{provider_slug}/">{escape(str(offer['provider']))}</a><span class="verified">source verified</span></div>
-      <h3><a href="{deal_path}">{escape(str(offer['title']))}</a></h3>
+      <h3><a href="{plan_path}">{escape(str(offer['title']))}</a></h3>
       <div class="price">{price_text(offer)}</div>
-      <p class="fine">Billing period: {escape(str(offer.get('billing_period', 'not stated')))} · Checked {escape(iso_date(str(offer['fetched_at'])))}</p>
-      <div class="actions"><a class="button" href="{deal_path}">Details</a><a class="text-link" href="{escape(str(offer['offer_url']))}" rel="{rel}">{link_label} ↗</a></div>
+      <p class="fine"><strong>Billing:</strong> {verified_field(offer, 'billing_period')}<br><strong>Renewal:</strong> {verified_field(offer, 'renewal')}<br><strong>Resources:</strong> {verified_field(offer, 'resources')}<br>Checked {escape(iso_date(str(offer['fetched_at'])))}</p>
+      <div class="actions"><a class="button" href="{plan_path}">Provider plans</a><a class="text-link" href="{escape(str(offer['offer_url']))}" rel="{rel}">{link_label} ↗</a></div>
     </article>"""
 
 
@@ -205,7 +225,8 @@ def build_index(config: Any, data: dict[str, Any]) -> None:
     cards = "".join(offer_card(offer) for offer in offers[:12])
     if not cards:
         cards = '<div class="empty"><h3>No unambiguous prices extracted on this run</h3><p>The official source checks are shown below. We publish nothing rather than guess.</p></div>'
-    provider_cards = "".join(provider_card(provider) for provider in providers)
+    visible_providers = providers if show_unpriced_sources(config) else [provider for provider in providers if int(provider.get("offer_count", 0)) > 0]
+    provider_cards = "".join(provider_card(provider) for provider in visible_providers)
     content = f"""
     <section class="hero"><div class="container">
       <span class="eyebrow">US market · official sources only</span>
@@ -221,7 +242,7 @@ def build_index(config: Any, data: dict[str, Any]) -> None:
     item_list = {
         "@type": "ItemList",
         "itemListElement": [
-            {"@type": "ListItem", "position": index, "url": f"{config.domain}/deals/{slugify(str(offer['provider']))}-{offer['id']}/"}
+            {"@type": "ListItem", "position": index, "url": f"{config.domain}{provider_plan_path(offer)}"}
             for index, offer in enumerate(offers, start=1)
         ],
     }
@@ -246,6 +267,8 @@ def build_provider_pages(config: Any, data: dict[str, Any], urls: list[tuple[str
         name = str(status["name"])
         path = f"/providers/{slugify(name)}/"
         offers = offers_by_provider.get(name, [])
+        if not offers and not show_unpriced_sources(config):
+            continue
         facts = [fact for fact in config.provider_facts if fact.provider == name]
         referral = next((item for item in config.provider_referrals if item.provider == name), None)
         verification = next((item for item in config.provider_verifications if item.provider == name), None)
@@ -329,14 +352,14 @@ def build_compare(config: Any, data: dict[str, Any], urls: list[tuple[str, str]]
     updated = str(data["meta"]["generated_at"])
     rows = []
     for offer in data["offers"]:
-        path = f"/deals/{slugify(str(offer['provider']))}-{offer['id']}/"
+        path = provider_plan_path(offer)
         rows.append(f"<tr><td><a href=\"{path}\">{escape(str(offer['title']))}</a></td><td>{escape(str(offer['provider']))}</td><td><strong>{price_text(offer)}</strong></td><td>{escape(str(offer.get('billing_period', 'not stated')))}</td><td>{escape(iso_date(str(offer['fetched_at'])))}</td></tr>")
     table_body = "".join(rows) if rows else '<tr><td colspan="5">No unambiguous priced plans were extracted on this run.</td></tr>'
     content = f"""
     <section class="page-hero"><div class="container"><div class="breadcrumbs"><a href="/">Deals</a> / Compare</div><span class="eyebrow">Same evidence, sortable by eye</span><h1>Compare verified VPS prices</h1><p class="lede">Prices are shown only when the provider's official page exposes a clear amount. Specs and checkout terms remain the provider's source of truth.</p></div></section>
     <section class="section"><div class="container"><div class="table-wrap"><table><thead><tr><th>Plan</th><th>Provider</th><th>Price</th><th>Period</th><th>Checked</th></tr></thead><tbody>{table_body}</tbody></table></div></div></section>
     """
-    schema = {"@context": "https://schema.org", "@type": "ItemList", "itemListElement": [{"@type": "ListItem", "position": index, "url": f"{config.domain}/deals/{slugify(str(offer['provider']))}-{offer['id']}/"} for index, offer in enumerate(data["offers"], 1)]}
+    schema = {"@context": "https://schema.org", "@type": "ItemList", "itemListElement": [{"@type": "ListItem", "position": index, "url": f"{config.domain}{provider_plan_path(offer)}"} for index, offer in enumerate(data["offers"], 1)]}
     html = render_page("compare.html", config=config, title=f"Compare verified VPS prices — {month_label(updated)} | {config.brand}", description="Compare current source-linked VPS plan prices for US buyers. Each amount includes its official source and fetch date.", canonical_path="/compare/", content=content, schema=schema, updated_at=updated)
     write_text(output_path("/compare/"), html)
     urls.append(("/compare/", iso_date(updated)))
@@ -423,6 +446,93 @@ def build_sitemap(config: Any, urls: list[tuple[str, str]]) -> None:
     write_text(SITE_DIR / "robots.txt", f"User-agent: *\nAllow: /\n\nSitemap: {config.domain}/sitemap.xml\n")
 
 
+def build_url_dispositions(config: Any, data: dict[str, Any], urls: list[tuple[str, str]]) -> None:
+    legacy_providers = set(render_list(config, "legacy_deal_providers"))
+    retired_providers = render_list(config, "retired_providers")
+    redirect_status = int(config.render.get("merged_deal_redirect_status", "301"))
+    retired_status = int(config.render.get("retired_provider_status", "410"))
+    expected_deals = int(config.render.get("legacy_deal_expected_count", "0"))
+    expected_total = int(config.render.get("legacy_sitemap_expected_count", "0"))
+    if redirect_status != 301:
+        raise ValueError("Merged legacy deal pages must use permanent HTTP 301 redirects")
+    if retired_status != 410:
+        raise ValueError("Retired provider pages without an equivalent replacement must return HTTP 410")
+
+    offers_by_provider: dict[str, list[dict[str, Any]]] = {}
+    for offer in data["offers"]:
+        offers_by_provider.setdefault(str(offer["provider"]), []).append(offer)
+
+    redirects: list[str] = []
+    dispositions: list[dict[str, Any]] = []
+    for offer in data["offers"]:
+        provider = str(offer["provider"])
+        if provider not in legacy_providers:
+            continue
+        source = f"/deals/{slugify(provider)}-{offer['id']}/"
+        target = provider_plan_path(offer)
+        redirects.append(f"{source} {target} {redirect_status}")
+        dispositions.append(
+            {
+                "source": source,
+                "action": "merge",
+                "status": redirect_status,
+                "target": target,
+                "reason": "The plan now lives as a source-linked anchor on its provider page; the permanent redirect avoids a duplicate standalone URL.",
+            }
+        )
+    if len(redirects) != expected_deals:
+        raise ValueError(f"Expected {expected_deals} legacy deal redirects, generated {len(redirects)}")
+    write_text(SITE_DIR / "_redirects", "\n".join(redirects) + "\n")
+
+    known_providers = {provider.name for provider in config.providers}
+    retired_paths: list[str] = []
+    for provider in retired_providers:
+        if provider not in known_providers:
+            raise ValueError(f"Unknown retired provider: {provider}")
+        if offers_by_provider.get(provider):
+            raise ValueError(f"Refusing to retire {provider}: the current run contains verified offers")
+        path = f"/providers/{slugify(provider)}/"
+        retired_paths.append(path)
+        dispositions.append(
+            {
+                "source": path,
+                "action": "retire",
+                "status": retired_status,
+                "target": None,
+                "reason": "No current source-verified plan data exists and there is no equivalent replacement page, so a misleading redirect is not used.",
+            }
+        )
+
+    normalized_retired = sorted(path.rstrip("/") for path in retired_paths)
+    worker = f'''const RETIRED = new Set({json.dumps(normalized_retired, ensure_ascii=False)});\n\nexport default {{\n  async fetch(request, env) {{\n    const path = new URL(request.url).pathname.replace(/\\/+$/, "") || "/";\n    if (RETIRED.has(path)) {{\n      return new Response("This provider page is no longer available because no current source-verified plan data can be published.\\n", {{\n        status: {retired_status},\n        headers: {{\n          "Content-Type": "text/plain; charset=utf-8",\n          "Cache-Control": "public, max-age=300",\n          "X-Robots-Tag": "noindex",\n        }},\n      }});\n    }}\n    return env.ASSETS.fetch(request);\n  }},\n}};\n'''
+    write_text(SITE_DIR / "_worker.js", worker)
+    function_routes = sorted({route for path in retired_paths for route in (path.rstrip("/"), path)})
+    write_text(SITE_DIR / "_routes.json", json.dumps({"version": 1, "include": function_routes, "exclude": []}, indent=2) + "\n")
+
+    retired_sources = {item["source"] for item in dispositions}
+    for path, _ in urls:
+        if path in retired_sources:
+            raise ValueError(f"Retired URL is still in the generated sitemap set: {path}")
+        dispositions.append(
+            {
+                "source": path,
+                "action": "keep",
+                "status": 200,
+                "target": path,
+                "reason": "The URL remains generated by the current source-verified build.",
+            }
+        )
+    dispositions.sort(key=lambda item: str(item["source"]))
+    if len(dispositions) != expected_total:
+        raise ValueError(f"Expected {expected_total} URL dispositions, generated {len(dispositions)}")
+    manifest = {
+        "previous_sitemap_count": expected_total,
+        "current_sitemap_count": len(urls),
+        "entries": dispositions,
+    }
+    write_text(SITE_DIR / "data" / "url-dispositions.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+
+
 def main() -> int:
     config = load_site_config()
     if not config.domain.startswith("https://"):
@@ -439,11 +549,11 @@ def main() -> int:
     urls: list[tuple[str, str]] = [("/", iso_date(str(data["meta"]["generated_at"])))]
     build_index(config, data)
     build_provider_pages(config, data, urls)
-    build_deal_pages(config, data, urls)
     build_compare(config, data, urls)
     build_methodology(config, data, urls)
     build_trust_pages(config, data, urls)
     build_not_found(config, data)
+    build_url_dispositions(config, data, urls)
     build_sitemap(config, urls)
     print(f"Built {len(urls)} indexable pages in {SITE_DIR}")
     return 0

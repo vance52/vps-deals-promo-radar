@@ -11,7 +11,14 @@ import unittest
 
 import build
 from ilang_config import load_site_config
-from scraper import SourceHTMLParser, finalize_offers, jsonld_offers, table_offers
+from scraper import (
+    SourceHTMLParser,
+    finalize_offers,
+    hostinger_plan_details,
+    jsonld_offers,
+    ovh_browser_offers,
+    table_offers,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,13 +30,15 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.brand, "HostDealsHub")
         self.assertGreaterEqual(len(config.providers), 3)
         self.assertTrue(all(provider.source_url.startswith("https://") for provider in config.providers))
-        self.assertEqual(len([fact for fact in config.provider_facts if fact.provider == "Vultr"]), 11)
+        self.assertEqual(len([fact for fact in config.provider_facts if fact.provider == "Vultr"]), 0)
         self.assertEqual(len([item for item in config.provider_referrals if item.provider == "Vultr"]), 1)
-        self.assertEqual(len([item for item in config.provider_verifications if item.provider == "Vultr"]), 1)
+        self.assertEqual(len([item for item in config.provider_verifications if item.provider == "Vultr"]), 0)
 
     def test_provider_change_drives_provider_page(self) -> None:
         source = (ROOT / ".ilang" / "site.ilang").read_text(encoding="utf-8")
-        changed = source.replace("DigitalOcean |", "Fixture Cloud |", 1)
+        changed = source.replace("DigitalOcean |", "Fixture Cloud |", 1).replace(
+            "show_unpriced_sources | false", "show_unpriced_sources | true"
+        )
         with tempfile.TemporaryDirectory() as temp:
             temp_path = Path(temp)
             config_path = temp_path / "site.ilang"
@@ -80,10 +89,26 @@ class ExtractionTests(unittest.TestCase):
 
     def test_monthly_table_header_selects_monthly_column(self) -> None:
         parser = SourceHTMLParser()
-        parser.feed("<table><tr><th>Plan</th><th>$/hr</th><th>$/mo</th></tr><tr><td>1 GB VPS</td><td>$0.01</td><td>$6.00</td></tr></table>")
+        parser.feed("<table><tr><th>Plan</th><th>Memory</th><th>vCPU</th><th>$/hr</th><th>$/mo</th></tr><tr><td>1 GB VPS</td><td>1 GB</td><td>1</td><td>$0.01</td><td>$6.00</td></tr></table>")
         offers = table_offers(parser, self.provider, self.fetched, "https://example.com/pricing")
         self.assertEqual(offers[0]["price"], "6.00")
         self.assertEqual(offers[0]["billing_period"], "month")
+        self.assertEqual(offers[0]["resources"], "Memory: 1 GB · vCPU: 1")
+
+    def test_hostinger_card_extracts_billing_renewal_and_resources(self) -> None:
+        html = '''<div data-qa="product-slug_vps:vps_kvm_1"><h3>KVM 1</h3><p>$4.99/mo</p><p>Renews at $11.99/mo for 2 years. Cancel anytime.</p><ul><li>1 vCPU core</li><li>4 GB RAM</li><li>50 GB NVMe disk space</li><li>4 TB bandwidth</li></ul></div>'''
+        details = hostinger_plan_details(html)["KVM 1"]
+        self.assertEqual(details["billing_period"], "month")
+        self.assertEqual(details["renewal"], "Renews at $11.99/mo for 2 years. Cancel anytime.")
+        self.assertIn("50 GB NVMe disk space", details["resources"])
+
+    def test_ovh_browser_card_requires_price_and_resources(self) -> None:
+        provider = next(item for item in load_site_config().providers if item.name == "OVHcloud")
+        html = '<main>VPS-1 From $ 4.54 /month Configure 2 vCores 4 GB RAM 40 GB SSD NVMe 500 Mbps public bandwidth</main>'
+        offers = ovh_browser_offers(html, provider, self.fetched, provider.source_url)
+        self.assertEqual(len(offers), 1)
+        self.assertEqual(offers[0]["price"], "4.54")
+        self.assertIn("4 GB RAM", offers[0]["resources"])
 
     def test_expired_offer_is_removed(self) -> None:
         expired = {"provider": "Fixture", "title": "Old", "price": "1", "currency": "USD", "offer_url": "https://example.com", "valid_until": "2020-01-01"}
@@ -91,30 +116,52 @@ class ExtractionTests(unittest.TestCase):
 
 
 class GeneratedSiteTests(unittest.TestCase):
-    def test_vultr_page_has_verified_facts_and_one_disclosed_referral(self) -> None:
-        page = (ROOT / "site" / "providers" / "vultr" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("$2.50", page)
-        self.assertIn("$640.00", page)
-        self.assertIn("IPv6 only", page)
-        self.assertEqual(page.count("https://www.vultr.com/?ref=7999218"), 1)
-        self.assertIn("This is an affiliate referral link.", page)
-        self.assertIn('<a href="https://www.vultr.com/pricing/" rel="nofollow noopener">', page)
-        self.assertIn("Browser session: official pricing table", page)
-        self.assertIn("Not exposed by browser session", page)
-        self.assertNotIn("blocked by robots", page)
-        self.assertNotIn("not returned", page)
+    def test_unpriced_provider_pages_are_not_published(self) -> None:
+        for slug in ("vultr", "akamai-linode", "hetzner-cloud", "contabo", "namecheap"):
+            self.assertFalse((ROOT / "site" / "providers" / slug).exists(), slug)
+        self.assertTrue((ROOT / "site" / "providers" / "ovhcloud" / "index.html").exists())
 
-    def test_source_record_matches_three_automated_provider_results(self) -> None:
-        expectations = {
-            "digitalocean": ("Automated: official HTML monthly-price table", "12", "200"),
-            "hostinger": ("Automated: official JSON-LD Offer", "4", "200"),
-            "hetzner-cloud": ("Automated check: no price extracted", "0", "200"),
-        }
-        for slug, (method, count, http_status) in expectations.items():
-            page = (ROOT / "site" / "providers" / slug / "index.html").read_text(encoding="utf-8")
-            self.assertIn(method, page, slug)
-            self.assertIn(f"<span>Published prices</span><strong>{count}</strong>", page, slug)
-            self.assertIn(f"<span>HTTP status</span><strong>{http_status}</strong>", page, slug)
+    def test_plans_live_on_provider_pages_not_deal_pages(self) -> None:
+        self.assertFalse((ROOT / "site" / "deals").exists())
+        sitemap = (ROOT / "site" / "sitemap.xml").read_text(encoding="utf-8")
+        self.assertNotIn("/deals/", sitemap)
+        self.assertEqual(sitemap.count("<url>"), 10)
+        provider_page = (ROOT / "site" / "providers" / "hostinger" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("<strong>Billing:</strong>", provider_page)
+        self.assertIn("<strong>Renewal:</strong>", provider_page)
+        self.assertIn("<strong>Resources:</strong>", provider_page)
+
+    def test_all_legacy_deals_redirect_to_existing_provider_anchors(self) -> None:
+        lines = (ROOT / "site" / "_redirects").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 28)
+        for line in lines:
+            source, target, status = line.split()
+            self.assertTrue(source.startswith("/deals/"), source)
+            self.assertEqual(status, "301")
+            provider_path, anchor = target.split("#", 1)
+            provider_page = ROOT / "site" / provider_path.strip("/") / "index.html"
+            self.assertTrue(provider_page.exists(), target)
+            self.assertIn(f'id="{anchor}"', provider_page.read_text(encoding="utf-8"), target)
+
+    def test_retired_provider_routes_return_410_by_configuration(self) -> None:
+        expected = {"vultr", "akamai-linode", "hetzner-cloud", "contabo", "namecheap"}
+        routes = json.loads((ROOT / "site" / "_routes.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(routes["include"]), 10)
+        for slug in expected:
+            self.assertIn(f"/providers/{slug}", routes["include"])
+            self.assertIn(f"/providers/{slug}/", routes["include"])
+        worker = (ROOT / "site" / "_worker.js").read_text(encoding="utf-8")
+        self.assertIn("status: 410", worker)
+        for slug in expected:
+            self.assertIn(f'/providers/{slug}', worker)
+
+    def test_url_disposition_manifest_accounts_for_all_43_legacy_urls(self) -> None:
+        manifest = json.loads((ROOT / "site" / "data" / "url-dispositions.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["previous_sitemap_count"], 43)
+        self.assertEqual(manifest["current_sitemap_count"], 10)
+        self.assertEqual(len(manifest["entries"]), 43)
+        counts = {action: sum(item["action"] == action for item in manifest["entries"]) for action in ("keep", "merge", "retire")}
+        self.assertEqual(counts, {"keep": 10, "merge": 28, "retire": 5})
 
     def test_generated_site_has_core_files_and_no_tokens(self) -> None:
         required = [ROOT / "site" / "index.html", ROOT / "site" / "404.html", ROOT / "site" / "robots.txt", ROOT / "site" / "sitemap.xml", ROOT / "site" / "data" / "offers.json"]
@@ -154,7 +201,9 @@ class GeneratedSiteTests(unittest.TestCase):
         self.assertIn('name="robots" content="noindex,follow"', page)
         self.assertIn("That page does not exist.", page)
         self.assertNotIn("/404.html", sitemap)
-        self.assertFalse((ROOT / "site" / "_redirects").exists())
+        redirects = (ROOT / "site" / "_redirects").read_text(encoding="utf-8")
+        self.assertNotIn("/* ", redirects)
+        self.assertNotIn(" 200", redirects)
 
 
 if __name__ == "__main__":
