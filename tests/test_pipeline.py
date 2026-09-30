@@ -220,6 +220,14 @@ class GeneratedSiteTests(unittest.TestCase):
             )
             self.assertEqual(html.count(f"gtag('config', '{measurement_id}')"), 1, str(page))
 
+    def test_content_security_policy_allows_only_required_ga4_origins(self) -> None:
+        headers = (ROOT / "site" / "_headers").read_text(encoding="utf-8")
+        self.assertIn("script-src 'self' 'unsafe-inline' https://www.googletagmanager.com", headers)
+        self.assertIn(
+            "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com",
+            headers,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
