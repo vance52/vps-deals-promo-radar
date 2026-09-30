@@ -228,6 +228,21 @@ class GeneratedSiteTests(unittest.TestCase):
             headers,
         )
 
+    def test_homepage_uses_compact_responsive_hero(self) -> None:
+        index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "site" / "assets" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('class="container hero-grid"', index)
+        self.assertIn('>Compare verified plans</a>', index)
+        self.assertIn('>How we verify prices</a>', index)
+        self.assertLess(index.index('id="deals"'), index.index('class="section proof-section"'))
+        self.assertIn(".hero-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))", styles)
+        self.assertIn(".mobile-nav{display:block", styles)
+        self.assertNotIn(".site-header nav a:last-child{display:none}", styles)
+        self.assertIn(".deal-card{min-height:0", styles)
+
+    def test_missing_offer_details_use_short_honest_label(self) -> None:
+        self.assertEqual(build.verified_field({}, "renewal"), "Not stated")
+
 
 if __name__ == "__main__":
     unittest.main()
