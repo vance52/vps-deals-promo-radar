@@ -205,6 +205,22 @@ class GeneratedSiteTests(unittest.TestCase):
         self.assertNotIn("/* ", redirects)
         self.assertNotIn(" 200", redirects)
 
+    def test_every_generated_html_page_has_one_ga4_tag(self) -> None:
+        config = load_site_config()
+        measurement_id = config.render.get("ga4_measurement_id", "")
+        self.assertRegex(measurement_id, r"^G-[A-Z0-9]+$")
+        pages = sorted((ROOT / "site").rglob("*.html"))
+        self.assertTrue(pages)
+        for page in pages:
+            html = page.read_text(encoding="utf-8")
+            self.assertEqual(
+                html.count(f"googletagmanager.com/gtag/js?id={measurement_id}"),
+                1,
+                str(page),
+            )
+            self.assertEqual(html.count(f"gtag('config', '{measurement_id}')"), 1, str(page))
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -38,6 +38,7 @@ ILANG
   merged_deal_redirect_status | 301
   retired_providers | Vultr, Akamai Linode, Hetzner Cloud, Contabo, Namecheap
   retired_provider_status | 410
+  ga4_measurement_id | G-22SJRP9Y0D
   affiliate_disclosure | Links may later be replaced with disclosed affiliate links; rankings never depend on commission.
 
 ::MODULE{UPDATE|title:更新频率}
@@ -50,3 +51,4 @@ ILANG
 ::RULE{valid_until 已过⇒标记过期或下架 不许留着冒充有效}
 ::RULE{affiliate_link 为空⇒使用厂商官方裸链并标记为非联盟链接}
 ::BOUNDARY{never:编优惠 编价格 编佣金 绕过robots.txt 抓登录内容|scope:permanent}
+

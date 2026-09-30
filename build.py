@@ -94,6 +94,22 @@ def json_script(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
 
+def google_tag_html(config: Any) -> str:
+    measurement_id = str(config.render.get("ga4_measurement_id", "")).strip()
+    if not measurement_id:
+        return ""
+    if not re.fullmatch(r"G-[A-Z0-9]+", measurement_id):
+        raise ValueError("ga4_measurement_id must be a GA4 measurement ID such as G-XXXXXXXXXX")
+    safe_id = escape(measurement_id, quote=True)
+    return (
+        f'<!-- Google tag (gtag.js) --><script async src="https://www.googletagmanager.com/gtag/js?id={safe_id}"></script>'
+        "<script>window.dataLayer = window.dataLayer || [];"
+        "function gtag(){dataLayer.push(arguments);}"
+        "gtag('js', new Date());"
+        f"gtag('config', '{safe_id}');</script>"
+    )
+
+
 def nav_html(brand: str, current: str) -> str:
     links = [("Deals", "/"), ("Compare", "/compare/"), ("About", "/about/"), ("Contact", "/contact/")]
     items = []
@@ -141,6 +157,7 @@ def render_page(
     }
     for token, value in replacements.items():
         template = template.replace(token, value)
+    template = template.replace("<head>", f"<head>{google_tag_html(config)}", 1)
     return template
 
 
@@ -561,3 +578,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
