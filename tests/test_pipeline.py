@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
 import json
 from pathlib import Path
 import tempfile
@@ -62,6 +63,7 @@ class ConfigTests(unittest.TestCase):
             original_site = build.SITE_DIR
             try:
                 build.SITE_DIR = temp_path / "site"
+                build.build_assets(config)
                 build.build_provider_pages(config, data, [])
                 generated = temp_path / "site" / "providers" / "fixture-cloud" / "index.html"
                 self.assertTrue(generated.exists())
@@ -242,6 +244,15 @@ class GeneratedSiteTests(unittest.TestCase):
 
     def test_missing_offer_details_use_short_honest_label(self) -> None:
         self.assertEqual(build.verified_field({}, "renewal"), "Not stated")
+
+    def test_stylesheet_url_uses_content_fingerprint(self) -> None:
+        styles = (ROOT / "site" / "assets" / "styles.css").read_bytes()
+        fingerprint = sha256(styles).hexdigest()[:12]
+        pages = sorted((ROOT / "site").rglob("*.html"))
+        self.assertTrue(pages)
+        for page in pages:
+            html = page.read_text(encoding="utf-8")
+            self.assertIn(f'/assets/styles.css?v={fingerprint}', html, str(page))
 
 
 if __name__ == "__main__":

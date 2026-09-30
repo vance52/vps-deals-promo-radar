@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from hashlib import sha256
 from html import escape
 import json
 from pathlib import Path
@@ -163,6 +164,12 @@ def render_page(
     }
     for token, value in replacements.items():
         template = template.replace(token, value)
+    styles_path = SITE_DIR / "assets" / "styles.css"
+    styles_version = sha256(styles_path.read_bytes()).hexdigest()[:12]
+    template = template.replace(
+        '/assets/styles.css"',
+        f'/assets/styles.css?v={styles_version}"',
+    )
     template = template.replace("<head>", f"<head>{google_tag_html(config)}", 1)
     return template
 
