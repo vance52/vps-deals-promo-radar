@@ -213,10 +213,10 @@
       "reason": "The plan now lives as a source-linked anchor on its provider page; the permanent redirect avoids a duplicate standalone URL."
     },
     {
-      "source": "/deals/hostinger-db1c29b1081e0c49/",
+      "source": "/deals/hostinger-7dcecd35d717d49a/",
       "action": "merge",
       "status": 301,
-      "target": "/providers/hostinger/#plan-db1c29b1081e0c49",
+      "target": "/providers/hostinger/#plan-7dcecd35d717d49a",
       "reason": "The plan now lives as a source-linked anchor on its provider page; the permanent redirect avoids a duplicate standalone URL."
     },
     {
